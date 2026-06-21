@@ -24,11 +24,17 @@ export function TransparencyGrid() {
           {isFetching ? 'Atualizando…' : 'Atualizar'}
         </Button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {(data ?? []).map((c) => (
-          <CampaignCard key={c.id} campaign={c} />
-        ))}
-      </div>
+      {(data ?? []).length === 0 ? (
+        <p className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+          Nenhuma campanha ativa no momento. Volte em breve!
+        </p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {(data ?? []).map((c) => (
+            <CampaignCard key={c.id} campaign={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
