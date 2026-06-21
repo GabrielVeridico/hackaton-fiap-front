@@ -34,3 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Convenções de UI
+
+Este projeto usa a variante **Base UI** do shadcn/ui (`@base-ui/react`), não Radix.
+Portanto o componente `Button` NÃO tem a prop `asChild`. Para renderizar um botão
+como link (Next `<Link>`), use a prop `render` + `nativeButton={false}`:
+
+```tsx
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
+<Button render={<Link href="/transparencia" />} nativeButton={false}>
+  Transparência
+</Button>
+```
+
+`nativeButton={false}` garante que o elemento renderizado (`<a>`) seja anunciado
+como link (e não `role="button"`) por leitores de tela.

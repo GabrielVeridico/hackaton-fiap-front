@@ -44,4 +44,21 @@ describe('callUpstream', () => {
       expect(r.error.message).toContain('já existe');
     }
   });
+
+  it('204 retorna Result.ok(undefined)', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    const r = await callUpstream<undefined>(
+      { group: 'users', path: '/api/auth/logout', method: 'POST', body: {} },
+      { config, fetchImpl },
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.value).toBeUndefined();
+  });
+
+  it('falha de rede (fetch rejeita) vira erro upstream sem propagar exceção', async () => {
+    const fetchImpl = vi.fn().mockRejectedValue(new Error('boom'));
+    const r = await callUpstream({ group: 'donations', path: '/api/transparency/campaigns' }, { config, fetchImpl });
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error.kind).toBe('upstream');
+  });
 });
