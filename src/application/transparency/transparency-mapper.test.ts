@@ -4,7 +4,7 @@ import { mapTransparencyCampaign } from './transparency-mapper';
 describe('mapTransparencyCampaign', () => {
   it('mapeia DTO do backend para domínio e recalcula o percentual (clamp)', () => {
     const r = mapTransparencyCampaign(
-      { Id: 'abc', Title: 'Cestas', Description: 'd', Goal: 1000, AmountRaised: 2500, Percentual: 999 },
+      { id: 'abc', title: 'Cestas', description: 'd', goal: 1000, amountRaised: 2500, percentual: 999 },
       0,
     );
     expect(r.id).toBe('abc');
@@ -13,7 +13,7 @@ describe('mapTransparencyCampaign', () => {
   });
 
   it('usa fallback de id quando o backend ainda não envia (Lacuna 1)', () => {
-    const r = mapTransparencyCampaign({ Title: 'X', Goal: 100, AmountRaised: 50, Percentual: 50 }, 3);
+    const r = mapTransparencyCampaign({ title: 'X', goal: 100, amountRaised: 50, percentual: 50 }, 3);
     expect(r.id).toBe('idx-3');
     expect(r.percentage).toBe(50);
   });

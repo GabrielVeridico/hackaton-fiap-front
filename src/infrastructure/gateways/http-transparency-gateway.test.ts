@@ -5,7 +5,7 @@ import { loadConfig } from '../config/env';
 describe('HttpTransparencyGateway', () => {
   it('busca do upstream donations e mapeia', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify([{ Id: '1', Title: 'A', Goal: 100, AmountRaised: 40, Percentual: 40 }]), {
+      new Response(JSON.stringify([{ id: '1', title: 'A', goal: 100, amountRaised: 40, percentual: 40 }]), {
         status: 200,
         headers: { 'content-type': 'application/json' },
       }),

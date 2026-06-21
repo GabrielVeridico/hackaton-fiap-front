@@ -3,11 +3,11 @@ import type { TransparencyCampaignDto } from './transparency-dto';
 
 export function mapTransparencyCampaign(dto: TransparencyCampaignDto, index: number): TransparencyCampaign {
   return {
-    id: dto.Id ?? `idx-${index}`,
-    title: dto.Title,
-    description: dto.Description,
-    goal: dto.Goal,
-    amountRaised: dto.AmountRaised,
-    percentage: computePercentage(dto.Goal, dto.AmountRaised),
+    id: dto.id ?? `idx-${index}`,
+    title: dto.title,
+    description: dto.description,
+    goal: dto.goal,
+    amountRaised: dto.amountRaised,
+    percentage: computePercentage(dto.goal, dto.amountRaised),
   };
 }
