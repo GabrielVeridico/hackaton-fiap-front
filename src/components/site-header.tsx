@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { HeartHandshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AuthNav } from '@/components/auth-nav';
 
 export function SiteHeader() {
   return (
@@ -14,9 +15,7 @@ export function SiteHeader() {
           <Button render={<Link href="/transparencia" />} variant="ghost" nativeButton={false}>
             Transparência
           </Button>
-          <Button render={<Link href="/login" />} nativeButton={false}>
-            Entrar
-          </Button>
+          <AuthNav />
         </nav>
       </div>
     </header>
