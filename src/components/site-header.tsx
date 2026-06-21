@@ -11,10 +11,10 @@ export function SiteHeader() {
           Conexão Solidária
         </Link>
         <nav className="flex items-center gap-2">
-          <Button render={<Link href="/transparencia" />} variant="ghost">
+          <Button render={<Link href="/transparencia" />} variant="ghost" nativeButton={false}>
             Transparência
           </Button>
-          <Button render={<Link href="/login" />}>
+          <Button render={<Link href="/login" />} nativeButton={false}>
             Entrar
           </Button>
         </nav>
