@@ -67,6 +67,16 @@ describe('runAuthenticated', () => {
     expect(call).not.toHaveBeenCalled();
     expect(r.ok).toBe(false);
   });
+
+  it('em 401 sem refresh token limpa a sessão e devolve unauthorized', async () => {
+    const store = makeStore({ at: 'expired' });
+    const gateway = { refresh: vi.fn() } as unknown as AuthGateway;
+    const call = vi.fn().mockResolvedValue(Result.fail({ kind: 'unauthorized', message: '401' }));
+    const r = await runAuthenticated(store, gateway, call);
+    expect(gateway.refresh).not.toHaveBeenCalled();
+    expect(store.state.at).toBeUndefined();
+    expect(r.ok).toBe(false);
+  });
 });
 
 describe('login', () => {
@@ -100,6 +110,15 @@ describe('logout', () => {
     const gateway = { logout: vi.fn().mockResolvedValue(Result.ok(undefined)) } as unknown as AuthGateway;
     const r = await logout(gateway, store);
     expect(gateway.logout).toHaveBeenCalledWith('r', 'a');
+    expect(store.state.at).toBeUndefined();
+    expect(r.ok).toBe(true);
+  });
+
+  it('não chama o upstream quando falta um token, mas limpa a sessão', async () => {
+    const store = makeStore({ at: 'a' });
+    const gateway = { logout: vi.fn() } as unknown as AuthGateway;
+    const r = await logout(gateway, store);
+    expect(gateway.logout).not.toHaveBeenCalled();
     expect(store.state.at).toBeUndefined();
     expect(r.ok).toBe(true);
   });
