@@ -16,6 +16,7 @@ const schema = z.object({
   PAYMENTS_API_URL: z.string().url().default('http://localhost:5002'),
   MOCK_DONOR_CAMPAIGNS: boolFromString,
   MOCK_MY_DONATIONS: boolFromString,
+  MOCK_DONATIONS: boolFromString,
 });
 
 export interface AppConfig {
@@ -26,6 +27,7 @@ export interface AppConfig {
   paymentsApiUrl: string;
   mockDonorCampaigns: boolean;
   mockMyDonations: boolean;
+  mockDonations: boolean;
 }
 
 export function loadConfig(source: Record<string, string | undefined> = process.env): AppConfig {
@@ -38,6 +40,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     paymentsApiUrl: parsed.PAYMENTS_API_URL,
     mockDonorCampaigns: parsed.MOCK_DONOR_CAMPAIGNS,
     mockMyDonations: parsed.MOCK_MY_DONATIONS,
+    mockDonations: parsed.MOCK_DONATIONS,
   };
 }
 

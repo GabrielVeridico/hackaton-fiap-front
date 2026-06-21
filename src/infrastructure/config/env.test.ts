@@ -18,6 +18,11 @@ describe('loadConfig', () => {
     const c = loadConfig({ MOCK_DONOR_CAMPAIGNS: 'false' });
     expect(c.mockDonorCampaigns).toBe(false);
   });
+
+  it('parseia MOCK_DONATIONS', () => {
+    expect(loadConfig({ MOCK_DONATIONS: 'true' }).mockDonations).toBe(true);
+    expect(loadConfig({}).mockDonations).toBe(false);
+  });
 });
 
 describe('resolveBaseUrl', () => {
