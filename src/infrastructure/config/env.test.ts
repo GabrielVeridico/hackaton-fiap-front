@@ -13,6 +13,11 @@ describe('loadConfig', () => {
     const c = loadConfig({ MOCK_DONOR_CAMPAIGNS: 'true' });
     expect(c.mockDonorCampaigns).toBe(true);
   });
+
+  it('interpreta a string "false" como false', () => {
+    const c = loadConfig({ MOCK_DONOR_CAMPAIGNS: 'false' });
+    expect(c.mockDonorCampaigns).toBe(false);
+  });
 });
 
 describe('resolveBaseUrl', () => {
