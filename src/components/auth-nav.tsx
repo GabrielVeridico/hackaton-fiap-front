@@ -26,6 +26,10 @@ export function AuthNav() {
   const firstName = user.name.split(' ')[0] ?? user.name;
   return (
     <>
+      <Button render={<Link href="/campanhas" />} variant="ghost" nativeButton={false}>Campanhas</Button>
+      {user.role === 'Doador' ? (
+        <Button render={<Link href="/minhas-doacoes" />} variant="ghost" nativeButton={false}>Minhas doações</Button>
+      ) : null}
       <Button render={<Link href="/perfil" />} variant="ghost" nativeButton={false}>
         Olá, {firstName}
       </Button>
