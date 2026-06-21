@@ -30,6 +30,9 @@ export function AuthNav() {
       {user.role === 'Doador' ? (
         <Button render={<Link href="/minhas-doacoes" />} variant="ghost" nativeButton={false}>Minhas doações</Button>
       ) : null}
+      {user.role === 'GestorONG' ? (
+        <Button render={<Link href="/admin" />} variant="ghost" nativeButton={false}>Gestão</Button>
+      ) : null}
       <Button render={<Link href="/perfil" />} variant="ghost" nativeButton={false}>
         Olá, {firstName}
       </Button>
