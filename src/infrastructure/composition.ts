@@ -14,6 +14,8 @@ import type { Donation } from '@/domain/donations/donation';
 import { Result } from '@/domain/shared/result';
 import { HttpCampaignsAdminGateway } from './gateways/http-campaigns-admin-gateway';
 import type { CampaignsAdminGateway } from '@/application/ports/campaigns-admin-gateway';
+import { HttpUsersAdminGateway } from './gateways/http-users-admin-gateway';
+import type { UsersAdminGateway } from '@/application/ports/users-admin-gateway';
 
 export function getTransparencyGateway(config: AppConfig = loadConfig()): TransparencyGateway {
   if (config.mockDonorCampaigns) {
@@ -49,4 +51,8 @@ export function getDonationsGateway(config: AppConfig = loadConfig()): Donations
 
 export function getCampaignsAdminGateway(config: AppConfig = loadConfig()): CampaignsAdminGateway {
   return new HttpCampaignsAdminGateway(config);
+}
+
+export function getUsersAdminGateway(config: AppConfig = loadConfig()): UsersAdminGateway {
+  return new HttpUsersAdminGateway(config);
 }
