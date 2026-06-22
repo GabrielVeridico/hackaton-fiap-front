@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,15 @@ export function EditUser({ id }: { id: string }) {
   const { data, isLoading } = useUsers();
   const update = useUpdateUserName(id);
   const target = (data ?? []).find((u) => u.id === id);
-  const [name, setName] = useState(target?.name ?? '');
+  const [name, setName] = useState('');
+
+  // Sincroniza o nome quando os dados do usuário carregam (cache fria),
+  // sem sobrescrever edições posteriores (dep só muda se o nome do alvo mudar).
+  useEffect(() => {
+    if (target?.name) {
+      setName(target.name);
+    }
+  }, [target?.name]);
 
   if (isLoading) {
     return <p className="text-muted-foreground">Carregando…</p>;
