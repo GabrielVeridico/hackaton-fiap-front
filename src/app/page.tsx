@@ -10,8 +10,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-12">
-      <section className="rounded-2xl bg-accent/60 p-10 text-center">
-        <h1 className="text-3xl font-bold text-foreground sm:text-4xl">
+      <section className="rounded-2xl bg-accent/60 p-12 text-center sm:p-16">
+        <h1 className="text-4xl font-bold text-foreground sm:text-5xl">
           Transforme solidariedade em impacto
         </h1>
         <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
@@ -31,7 +31,7 @@ export default async function HomePage() {
       {featured.length > 0 ? (
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold">Campanhas em destaque</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featured.map((c) => (
               <CampaignCard key={c.id} campaign={c} />
             ))}

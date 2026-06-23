@@ -5,23 +5,24 @@ import type { TransparencyCampaign } from '@/domain/transparency/transparency-ca
 
 export function CampaignCard({ campaign }: { campaign: TransparencyCampaign }) {
   return (
-    <Card className="flex flex-col">
+    <Card className="flex h-full flex-col p-2">
       <CardHeader>
-        <CardTitle className="text-lg">{campaign.title}</CardTitle>
+        <CardTitle className="text-2xl">{campaign.title}</CardTitle>
         {campaign.description ? (
-          <p className="text-sm text-muted-foreground">{campaign.description}</p>
+          <p className="text-base text-muted-foreground">{campaign.description}</p>
         ) : null}
       </CardHeader>
-      <CardContent className="mt-auto space-y-3">
+      <CardContent className="mt-auto space-y-4">
         <Progress
           value={campaign.percentage}
           aria-label={`${campaign.percentage}% arrecadado`}
+          className="h-3"
         />
         <div className="flex items-baseline justify-between">
-          <span className="font-semibold text-primary">{formatBRL(campaign.amountRaised)}</span>
-          <span className="text-sm text-muted-foreground">{campaign.percentage}%</span>
+          <span className="text-2xl font-bold text-primary">{formatBRL(campaign.amountRaised)}</span>
+          <span className="text-base font-medium text-muted-foreground">{campaign.percentage}%</span>
         </div>
-        <p className="text-xs text-muted-foreground">Meta: {formatBRL(campaign.goal)}</p>
+        <p className="text-sm text-muted-foreground">Meta: {formatBRL(campaign.goal)}</p>
       </CardContent>
     </Card>
   );

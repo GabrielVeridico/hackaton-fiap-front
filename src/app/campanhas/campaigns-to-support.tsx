@@ -25,13 +25,13 @@ export function CampaignsToSupport() {
   const canDonate = user?.role === 'Doador';
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {campaigns.map((c) => {
         const href = canDonate
           ? `/doar/${c.id}?titulo=${encodeURIComponent(c.title)}`
           : `/login?next=${encodeURIComponent('/campanhas')}`;
         return (
-          <div key={c.id} className="flex flex-col gap-2">
+          <div key={c.id} className="flex flex-col gap-3">
             <CampaignCard campaign={c} />
             {user && !canDonate ? (
               <p className="text-center text-xs text-muted-foreground">Apenas doadores podem doar.</p>
