@@ -30,18 +30,17 @@ export function CampaignsToSupport() {
         const href = canDonate
           ? `/doar/${c.id}?titulo=${encodeURIComponent(c.title)}`
           : `/login?next=${encodeURIComponent('/campanhas')}`;
-        return (
-          <div key={c.id} className="flex flex-col gap-3">
-            <CampaignCard campaign={c} />
-            {user && !canDonate ? (
-              <p className="text-center text-xs text-muted-foreground">Apenas doadores podem doar.</p>
-            ) : (
-              <Button render={<Link href={href} />} nativeButton={false} className="w-full">
-                Doar
-              </Button>
-            )}
-          </div>
-        );
+        const action =
+          user && !canDonate ? (
+            <p className="w-full text-center text-sm text-muted-foreground">
+              Apenas doadores podem doar.
+            </p>
+          ) : (
+            <Button render={<Link href={href} />} nativeButton={false} size="lg" className="w-full">
+              Doar
+            </Button>
+          );
+        return <CampaignCard key={c.id} campaign={c} action={action} />;
       })}
     </div>
   );

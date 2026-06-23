@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAdminCampaigns } from '@/hooks/use-admin-campaigns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageHeader } from '@/components/page-header';
 
 export default function AdminDashboardPage() {
   const { data } = useAdminCampaigns();
@@ -10,9 +11,9 @@ export default function AdminDashboardPage() {
   const active = campaigns.filter((c) => c.status === 'Active').length;
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Visão geral</h1>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-8">
+      <PageHeader title="Visão geral" subtitle="Resumo das campanhas de arrecadação." />
+      <div className="grid gap-6 sm:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Campanhas ativas</CardTitle>
