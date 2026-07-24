@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,15 +13,11 @@ export function EditUser({ id }: { id: string }) {
   const { data, isLoading } = useUsers();
   const update = useUpdateUserName(id);
   const target = (data ?? []).find((u) => u.id === id);
-  const [name, setName] = useState('');
-
-  // Sincroniza o nome quando os dados do usuário carregam (cache fria),
-  // sem sobrescrever edições posteriores (dep só muda se o nome do alvo mudar).
-  useEffect(() => {
-    if (target?.name) {
-      setName(target.name);
-    }
-  }, [target?.name]);
+  // Valor "rascunho" do input: enquanto o usuário não editar (draft === null),
+  // exibe o nome carregado. Derivar no render — em vez de setState num useEffect —
+  // evita cascading renders (regra do react-compiler / Next 16).
+  const [draft, setDraft] = useState<string | null>(null);
+  const name = draft ?? target?.name ?? '';
 
   if (isLoading) {
     return <p className="text-muted-foreground">Carregando…</p>;
@@ -53,7 +49,7 @@ export function EditUser({ id }: { id: string }) {
             <Input
               id="name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setDraft(e.target.value)}
               placeholder={target.name}
             />
           </div>
