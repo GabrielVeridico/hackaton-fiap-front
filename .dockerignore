@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+build
+.git
+.gitignore
+coverage
+*.tsbuildinfo
+next-env.d.ts
+Dockerfile
+.dockerignore
+.env*
+*.log
+C:*
