@@ -2,6 +2,8 @@
 
 Front-end da plataforma **Conexão Solidária** (Hackathon FIAP PosTech): **Next.js 16 (App Router)** com um **BFF (Backend-for-Frontend)** server-side. O navegador fala **apenas com o BFF** (mesma origem → sem CORS); o BFF chama o backend (via **APIM** em produção) e guarda o JWT em **cookies httpOnly** — nenhum token chega ao JavaScript do browser.
 
+> **Ecossistema (6 repos):** `front` (este) · `users` · `donations` · `payments` · `notifications` · `orchestration`. Mapa completo no [orchestration](https://github.com/GabrielVeridico/hackaton-fiap-orchestration#-ecossistema).
+
 - **Next.js 16.2.9 / React 19 / TypeScript** · **Tailwind v4** · **shadcn/ui (Base UI)** · **TanStack Query** · **Zod** · **React Hook Form**
 - **Arquitetura limpa em camadas** dentro do `src/`
 - **Vitest** (106 casos: domínio, use cases, gateways, BFF, componentes)
