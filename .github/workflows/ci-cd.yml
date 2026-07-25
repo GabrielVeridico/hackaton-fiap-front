@@ -4,6 +4,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Enfileira os runs em vez de deixar dois deploys disputarem a mesma revisão do
+# Container App. cancel-in-progress fica false: abortar no meio de um rollout deixaria
+# o app em estado indeterminado.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   ci:
@@ -31,21 +42,30 @@ jobs:
     name: Deploy to Azure Container Apps (opcional)
     runs-on: ubuntu-latest
     needs: ci
-    # Gated: só em push na main COM a variável DEPLOY_TO_ACA=true.
+    # Gated: push na main ou disparo manual, e só com a variável DEPLOY_TO_ACA=true.
     # Mantém a CI verde sem infra/secrets Azure (padrão RT5).
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_TO_ACA == 'true'
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      && github.ref == 'refs/heads/main'
+      && vars.DEPLOY_TO_ACA == 'true'
+    permissions:
+      id-token: write # obrigatório para o OIDC do azure/login
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
-      - name: Azure Login
+      # Autenticação federada (OIDC): nenhuma senha de longa duração fica guardada no repositório.
+      - name: Azure Login (OIDC)
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Login to ACR
+      - name: Login no ACR
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
-      - name: Build & push image (docker no runner; NAO az acr build — ACR Tasks e bloqueado no Free Trial)
+      - name: Build & push da imagem (docker no runner; NAO az acr build — ACR Tasks e bloqueado no Free Trial)
         run: |
           IMAGE=${{ secrets.ACR_NAME }}.azurecr.io/hackatonfiap-front
           docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest -f Dockerfile .
@@ -60,3 +80,41 @@ jobs:
             --name ca-conexao-front \
             --resource-group ${{ secrets.RESOURCE_GROUP }} \
             --image ${{ secrets.ACR_NAME }}.azurecr.io/hackatonfiap-front:${{ github.sha }}
+
+      # `az containerapp update` retorna assim que o ARM aceita a alteração — não espera
+      # a revisão subir. Sem este passo o job ficaria verde com a revisão nova quebrada.
+      - name: Aguarda a nova revisão ficar saudável
+        run: |
+          set -euo pipefail
+          APP=ca-conexao-front
+          RG='${{ secrets.RESOURCE_GROUP }}'
+          ESPERADA="${{ secrets.ACR_NAME }}.azurecr.io/hackatonfiap-front:${{ github.sha }}"
+
+          REV=$(az containerapp show -n "$APP" -g "$RG" --query properties.latestRevisionName -o tsv)
+          echo "Revisão nova: $REV"
+
+          for tentativa in $(seq 1 30); do
+            ESTADO=$(az containerapp revision show -n "$APP" -g "$RG" --revision "$REV" \
+                       --query properties.runningState -o tsv)
+            echo "  [$tentativa/30] runningState=$ESTADO"
+            case "$ESTADO" in
+              Running|RunningAtMaxScale|ScaledToZero)
+                IMAGEM=$(az containerapp show -n "$APP" -g "$RG" \
+                           --query properties.template.containers[0].image -o tsv)
+                if [ "$IMAGEM" != "$ESPERADA" ]; then
+                  echo "::error::a revisão subiu com $IMAGEM, esperado $ESPERADA"
+                  exit 1
+                fi
+                echo "OK — $APP servindo $IMAGEM"
+                exit 0
+                ;;
+              Failed|Degraded)
+                echo "::error::revisão $REV terminou em $ESTADO"
+                az containerapp logs show -n "$APP" -g "$RG" --revision "$REV" --tail 50 || true
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::timeout de 5min aguardando a revisão $REV"
+          exit 1
