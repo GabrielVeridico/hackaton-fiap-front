@@ -1,76 +1,160 @@
-# hackaton-fiap-front (Conexão Solidária — Web)
+# hackaton-fiap-front — Conexão Solidária (Web)
 
-Front-end da plataforma **Conexão Solidária** (Hackathon FIAP PosTech): **Next.js 16 (App Router)** com um **BFF (Backend-for-Frontend)** server-side. O navegador fala **apenas com o BFF** (mesma origem → sem CORS); o BFF chama o backend (via **APIM** em produção) e guarda o JWT em **cookies httpOnly** — nenhum token chega ao JavaScript do browser.
+Front-end da plataforma **Conexão Solidária** (Hackathon FIAP PosTech). É um **Next.js 16 (App Router)** com um **BFF (Backend-for-Frontend)** server-side: o navegador conversa apenas com o BFF, na mesma origem, e o BFF é quem chama os microsserviços. O JWT fica em cookies `httpOnly` — nenhum token chega ao JavaScript da página.
 
-> **Ecossistema (6 repos):** `front` (este) · `users` · `donations` · `payments` · `notifications` · `orchestration`. Mapa completo no [orchestration](https://github.com/GabrielVeridico/hackaton-fiap-orchestration#-ecossistema).
+> **Ecossistema (6 repositórios):** `front` (este) · `users` · `donations` · `payments` · `notifications` · `orchestration`. Mapa completo no [orchestration](https://github.com/GabrielVeridico/hackaton-fiap-orchestration#ecossistema).
 
-- **Next.js 16.2.9 / React 19 / TypeScript** · **Tailwind v4** · **shadcn/ui (Base UI)** · **TanStack Query** · **Zod** · **React Hook Form**
-- **Arquitetura limpa em camadas** dentro do `src/`
-- **Vitest** (106 casos: domínio, use cases, gateways, BFF, componentes)
-- **Node 22** (ver `Dockerfile`)
+## Stack
 
-> **Hospedado no Azure:** roda em **Azure Container Apps** (`ca-conexao-front`). Provisionamento em `hackaton-fiap-orchestration/iac/frontend.bicep`.
+| Item | Escolha |
+|------|---------|
+| Framework | Next.js 16.2.9 (App Router) / React 19 / TypeScript 5 |
+| Estilo | Tailwind v4 · shadcn/ui na variante **Base UI** (`@base-ui/react`, não Radix) |
+| Dados | TanStack Query no cliente; Server Components onde não há interação |
+| Validação | Zod (formulários e variáveis de ambiente) + React Hook Form |
+| Arquitetura | Camadas `domain` → `application` → `infrastructure`, com o App Router na borda |
+| Testes | Vitest + Testing Library |
+| Runtime | Node 22 (build e imagem Docker) |
 
-## Arquitetura
+O BFF resolve dois problemas de uma vez: elimina CORS (mesma origem) e tira o token do alcance do browser. Nenhuma variável `NEXT_PUBLIC_*` existe no projeto — toda configuração é server-side.
+
+## Papel no fluxo
 
 ```
-src/
-├── domain/          # Result/DomainError, entidades (auth, campaigns, donations, transparency), regras puras
-├── application/     # ports (gateways/session), use cases, mappers, runAuthenticated (refresh-on-401)
-├── infrastructure/  # server-only: config/env (Zod), http/upstream-client, gateways HTTP/mock,
-│                    #   session/cookie-session-store (cs_at/cs_rt), composition.ts
-├── app/             # App Router: páginas (RSC/client) + BFF em app/api/bff/**/route.ts
-├── components/ · hooks/ · lib/ (bff-client, http-status, format BRL)
+browser  →  /api/bff/*  (rota de rota do Next, mesma origem)
+              ↓  injeta Authorization: Bearer a partir do cookie cs_at
+           upstream: APIM (produção) ou os serviços diretos (desenvolvimento)
 ```
 
-**Fluxo:** `browser → /api/bff/* (BFF, mesma origem) → upstream (APIM ou serviços) → resposta`. O login seta `cs_at`/`cs_rt` (httpOnly); rotas autenticadas leem o `cs_at` e injetam `Authorization: Bearer` no upstream, com refresh automático em 401.
+- **Sessão.** O login grava `cs_at` (access, ~4 h) e `cs_rt` (refresh, 7 dias) como cookies `httpOnly`.
+- **Refresh automático.** `runAuthenticated` reexecuta a chamada uma vez após um 401, renovando o par de tokens antes de desistir.
+- **Gate de navegação.** O proxy do Next protege `/perfil`, `/minhas-doacoes`, `/doar` e `/admin`, redirecionando para `/login` quando não há `cs_rt`. O gate olha o refresh, não o access: um access expirado não deve derrubar o usuário para a tela de login.
+- **Dois modos de upstream.** `services` chama os três microsserviços diretamente (desenvolvimento); `apim` chama o gateway único (produção).
 
-## Variáveis de ambiente (runtime)
+## Endpoints
 
-| Var | Descrição |
-|-----|-----------|
-| `UPSTREAM_MODE` | `services` (dev, 3 serviços) ou `apim` (produção, gateway único) |
-| `APIM_BASE_URL` | **obrigatória quando `UPSTREAM_MODE=apim`** — RAIZ do gateway, **sem `/api`** (ex.: `https://apim-conexao-solidaria-7xafxr.azure-api.net`) |
-| `USERS_API_URL` / `DONATIONS_API_URL` / `PAYMENTS_API_URL` | usadas só no modo `services` (defaults `http://localhost:5001/5003/5002`) |
-| `MOCK_DONOR_CAMPAIGNS` / `MOCK_MY_DONATIONS` / `MOCK_DONATIONS` | fixtures para rodar sem backend (default `false`) |
+### Rotas de página
 
-Não há `NEXT_PUBLIC_*` — tudo é server-side. Ver `.env.example`.
+| Rota | Acesso | Conteúdo |
+|------|--------|----------|
+| `/` | público | Página inicial |
+| `/campanhas` | público | Campanhas abertas para doação |
+| `/transparencia` | público | Painel de transparência (meta, arrecadado e percentual por campanha) |
+| `/login` · `/cadastro` | público | Autenticação e autocadastro de doador |
+| `/doar/{id}` | doador | Formulário de doação para uma campanha |
+| `/minhas-doacoes` · `/minhas-doacoes/{id}` | doador | Histórico e status das próprias doações |
+| `/perfil` | autenticado | Dados da conta |
+| `/admin` | gestor | Painel de gestão |
+| `/admin/campanhas`, `/nova`, `/{id}` | gestor | CRUD de campanhas |
+| `/admin/usuarios`, `/novo`, `/{id}` | gestor | CRUD de usuários |
+
+### Rotas do BFF (`/api/bff`)
+
+| Método | Rota | Upstream |
+|--------|------|----------|
+| POST | `/api/bff/auth/login` · `/auth/register` · `/auth/logout` | UserAPI |
+| GET | `/api/bff/auth/me` | UserAPI |
+| GET · POST | `/api/bff/users` | UserAPI |
+| PUT | `/api/bff/users/{id}` | UserAPI |
+| PATCH | `/api/bff/users/{id}/role` · `/deactivate` · `/reactivate` | UserAPI |
+| GET · POST | `/api/bff/campaigns` | DonationAPI |
+| GET · PUT | `/api/bff/campaigns/{id}` | DonationAPI |
+| PATCH | `/api/bff/campaigns/{id}/status` | DonationAPI |
+| GET · POST | `/api/bff/donations` | DonationAPI |
+| GET | `/api/bff/donations/{id}` | DonationAPI |
+| GET | `/api/bff/transparency/campaigns` | DonationAPI (público) |
 
 ## Como rodar localmente
+
+Pré-requisito: **Node 22**.
 
 ```bash
 npm ci
 
-# Opção A — sem backend (fixtures): transparência e doações mockadas
+# Opção A — sem backend: transparência e doações servidas por fixtures
 UPSTREAM_MODE=services MOCK_DONOR_CAMPAIGNS=true MOCK_DONATIONS=true npm run dev
 
-# Opção B — contra os serviços locais (users :5001, donations :5003, payments :5002)
+# Opção B — contra os serviços locais (users :5001, payments :5002, donations :5003)
 npm run dev
 ```
-App em `http://localhost:3000`. Auth/gestão exigem os serviços reais no ar (sem mock).
 
-Qualidade (o que a CI roda):
+A aplicação sobe em `http://localhost:3000`. Autenticação e gestão exigem os serviços reais no ar: os mocks cobrem apenas leitura de campanhas e doações.
+
+Para subir a plataforma inteira de uma vez, use [orchestration/local](https://github.com/GabrielVeridico/hackaton-fiap-orchestration/tree/master/local).
+
+### Docker
+
+```bash
+docker build -t hackatonfiap-front:local -f Dockerfile .
+docker run -p 3000:3000 \
+  -e UPSTREAM_MODE=apim \
+  -e APIM_BASE_URL=https://<apim-host>.azure-api.net \
+  hackatonfiap-front:local
+```
+
+A imagem expõe a porta **3000**.
+
+## Configuração
+
+Todas as variáveis são lidas no servidor e validadas por Zod no boot (`src/infrastructure/config/env.ts`). Ver `.env.example`.
+
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `UPSTREAM_MODE` | não | `services` (padrão, chama os três serviços) ou `apim` (gateway único) |
+| `APIM_BASE_URL` | quando `UPSTREAM_MODE=apim` | Raiz do gateway, **sem** `/api`. Ex.: `https://<apim-host>.azure-api.net` |
+| `USERS_API_URL` | não | Padrão `http://localhost:5001`. Usada só no modo `services` |
+| `DONATIONS_API_URL` | não | Padrão `http://localhost:5003`. Usada só no modo `services` |
+| `PAYMENTS_API_URL` | não | Padrão `http://localhost:5002`. Usada só no modo `services` |
+| `MOCK_DONOR_CAMPAIGNS` | não | `true` serve as campanhas do doador por fixture. Padrão `false` |
+| `MOCK_MY_DONATIONS` | não | `true` serve o histórico de doações por fixture. Padrão `false` |
+| `MOCK_DONATIONS` | não | `true` serve a criação de doação por fixture. Padrão `false` |
+
+Para descobrir o host do APIM do ambiente:
+
+```bash
+az apim list -g hackaton-fiap --query "[].gatewayUrl" -o tsv
+```
+
+## Testes
+
 ```bash
 npm run lint       # eslint
 npm run typecheck  # tsc --noEmit
 npm test           # vitest
 ```
 
-### Docker
-```bash
-docker build -t hackatonfiap-front:local -f Dockerfile .
-docker run -p 3000:3000 -e UPSTREAM_MODE=apim -e APIM_BASE_URL=https://<apim>.azure-api.net hackatonfiap-front:local
-```
-
-## Deploy (Azure Container Apps)
-Imagem publicada no ACR e implantada em `ca-conexao-front` (RG `hackaton-fiap`). Provisionamento e passo a passo em `hackaton-fiap-orchestration/iac/frontend.bicep` + `deploy-frontend.ps1`. Env de produção: `UPSTREAM_MODE=apim` + `APIM_BASE_URL=<gateway APIM>`.
+São **119 casos** em 35 arquivos, distribuídos pelas camadas: regras de domínio, use cases, mappers, gateways HTTP, cliente de upstream, sessão em cookie, validação de ambiente e os formulários de login, cadastro, doação, campanha e usuário. A CI roda exatamente estes três comandos.
 
 ## CI/CD
-`.github/workflows/ci-cd.yml`: push/PR na `main` → `npm ci` + `lint` + `typecheck` + `vitest` + **build da imagem Docker** (sempre). Deploy no Container App **opcional/gated** por `vars.DEPLOY_TO_ACA == 'true'`.
 
-## Convenções de UI
+`.github/workflows/ci-cd.yml`. A cada push ou pull request na `main`, e sob `workflow_dispatch`:
 
-Este projeto usa a variante **Base UI** do shadcn/ui (`@base-ui/react`), não Radix. Portanto o `Button` **não** tem `asChild`. Para renderizar um botão como link (`<Link>` do Next), use `render` + `nativeButton={false}`:
+- **Job `ci`** — `npm ci`, `lint`, `typecheck`, `vitest` e `docker build`. Roda sempre, sem depender de nenhum segredo.
+- **Job `cd`** — condicionado a `vars.DEPLOY_TO_ACA == 'true'`. Sem essa variável o pipeline fecha verde só com a CI.
+
+O deploy faz login federado por **OIDC**, envia a imagem ao **ACR** e atualiza o Container App com `az containerapp update`.
+
+A aplicação roda em **Azure Container Apps** (`ca-conexao-front`, no resource group `hackaton-fiap`), com `UPSTREAM_MODE=apim` e `APIM_BASE_URL` apontando para o gateway. O provisionamento está em `orchestration/iac/frontend.bicep` e o passo a passo em `orchestration/iac/deploy-frontend.ps1`.
+
+## Estrutura de pastas
+
+```
+src/
+├── domain/          # Result/DomainError, entidades (auth, campaigns, donations, transparency, users)
+├── application/     # ports (gateways e sessão), use cases, mappers, runAuthenticated
+├── infrastructure/  # server-only: config (Zod), upstream-client, gateways HTTP e mock,
+│                    #   cookie-session-store (cs_at/cs_rt), composition.ts
+├── app/             # App Router: páginas e o BFF em app/api/bff/**/route.ts
+├── components/      # UI (shadcn/Base UI) e componentes de domínio
+├── hooks/ · lib/    # bff-client, http-status, rótulos, formatação em BRL
+└── proxy.ts         # gate de sessão nas rotas privadas
+```
+
+A dependência aponta para dentro: `app` e `components` só falam com `application`, que só conhece `domain` e as próprias portas. As implementações concretas vivem em `infrastructure` e são amarradas em `composition.ts`.
+
+## Convenção de UI
+
+Este projeto usa a variante **Base UI** do shadcn/ui, não Radix. Consequência prática: o `Button` não tem `asChild`. Para renderizar um botão como link, use `render` com `nativeButton={false}`:
 
 ```tsx
 import Link from 'next/link';
@@ -81,4 +165,4 @@ import { Button } from '@/components/ui/button';
 </Button>
 ```
 
-`nativeButton={false}` garante que o `<a>` renderizado seja anunciado como link (não `role="button"`) por leitores de tela.
+O `nativeButton={false}` garante que o `<a>` gerado seja anunciado como link, e não como `role="button"`, por leitores de tela.

@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# artefatos temporários de ferramentas (saída de teste, scratchpad)
+*test-output.txt
+.claude/
+.superpowers/
